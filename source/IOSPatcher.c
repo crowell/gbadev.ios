@@ -825,7 +825,7 @@ s32 get_IOS(IOS **ios, u32 iosnr, u32 revision)
 	int selection = 0;*/
 	int ret;
 	ret = Init_SD();
-	if(ret >= 0)
+/*	if(ret >= 0)
 	{
 		sprintf(buf, "sd:/IOS%u-64-v%u.wad", iosnr, revision);
 		ret = Wad_Read_into_memory(buf, ios, iosnr, revision);
@@ -837,7 +837,7 @@ s32 get_IOS(IOS **ios, u32 iosnr, u32 revision)
 		Close_SD();
 	}
 	if(ret < 0)
-		ret = Nand_Read_into_memory(ios, iosnr, revision);
+*/		ret = Nand_Read_into_memory(ios, iosnr, revision);
 	return ret;
 }
 
@@ -897,7 +897,7 @@ s32 Install_patched_IOS(u32 iosnr, u32 iosrevision, bool es_trucha_patch, bool e
 
 	if (es_trucha_patch || es_identify_patch || nand_patch || version_patch || Kill_AntiSysTitleInstall_patch)
 	{
-		index = module_index(ios, "ES:");
+		index = module_index(ios, "ES:"); // todo: figure out this for kernel. I see "FSP:" and "IOSP:" in vIOS d.app
 		if (index < 0)
 		{
 			printf("Could not identify ES module\n");
@@ -991,8 +991,8 @@ s32 Install_patched_IOS(u32 iosnr, u32 iosrevision, bool es_trucha_patch, bool e
 	printf("Preparations complete\n\n");
 	
 
-	printf("Installing...\n");
-	ret = install_IOS(ios, false);
+	printf("Not Installing...\n");	// we'll just call this "simulation mode" for now
+/*	ret = install_IOS(ios, false);
 	if (ret < 0)
 	{
 		free_IOS(&ios);
@@ -1008,7 +1008,7 @@ s32 Install_patched_IOS(u32 iosnr, u32 iosrevision, bool es_trucha_patch, bool e
 		
 		return -1;
 	}
-	printf("done\n");
+*/	printf("done\n");
 	
 	if (free) free_IOS(&ios);
 	return 0;

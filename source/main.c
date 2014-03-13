@@ -12,7 +12,7 @@
 #include "uninstall.h"
 #include "memory/mem2.hpp"
 
-#define IOS36version 3864
+#define IOS58version 6432
 
 void InitVideo()
 {
@@ -86,7 +86,7 @@ int main(int argc, char* argv[])
 	waitforbuttonpress(NULL, NULL);
 
 	printf("About to install IOS236\n");
-	ret = Install_patched_IOS(36, IOS36version, true, true, true, true, true, 236, 65535, false);
+	ret = Install_patched_IOS(58, IOS58version, true, true, true, true, true, 203, 65535, false);
 
 	ISFS_Deinitialize();
 	if (ret < 0) {
