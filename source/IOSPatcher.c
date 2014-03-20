@@ -134,7 +134,9 @@ void patch_syscall(u8*start, u32 syscall, u32 addr)
 	start += bin->hdrsize + bin->loadersize;
 	Elf32_Ehdr*elf = (Elf32_Ehdr*)start;
 	Elf32_Phdr*prog = (Elf32_Ehdr*)(start+elf->e_poff+(elf->phentsize*(elf->phnum-2)));
+	printf("Syscall table found at offset 0x%08x\n", prog->p_offset)
 	u32*table = (u32*)(start+prog->p_offset);
+	printf("Old entry 0x%08x, changing to 0x%08x\n", table[syscall], addr);
 	table[syscall] = addr;
 }
 
@@ -351,10 +353,9 @@ bool contains_module(u8 *buf, u32 size, char *module)
 			while (buf[i+strlen(ios_version_tag)] == ' ') i++; // skip spaces
 			strlcpy(version_buf, (char *)buf + i + strlen(ios_version_tag), sizeof version_buf);
 			i += 64;
+			printf("%s\n", version_buf);
 			if (strncmp(version_buf, module, strlen(module)) == 0)
-			{
 				return true;
-			}
 		}
 	}
 	return false;
@@ -366,14 +367,10 @@ s32 module_index(IOS *ios, char *module)
 	for (i = 0; i < ios->content_count; i++)
 	{
 		if (!ios->decrypted_buffer[i] || !ios->buffer_size[i])
-		{
 			return -1;
-		}
-		
+		printf("Checking index %d\n",i);
 		if (contains_module(ios->decrypted_buffer[i], ios->buffer_size[i], module))
-		{
 			return i;
-		}
 	}
 	return -1;
 }
@@ -938,6 +935,13 @@ s32 Install_patched_IOS(u32 iosnr, u32 iosrevision, bool es_trucha_patch, bool e
 	tmd_content *p_cr = TMD_CONTENTS(p_tmd);
 
 	index = kernel_index(ios);
+	if (index < 0)
+	{
+		printf("Could not identify ES module\n");
+		free_IOS(&ios);
+		return -1;
+	}
+	printf("Kernel found at index %d...Patching.\n", index);
 	// before loading this IOS some valid ARM code needs to be written to the beginning of mem2
 	// or it will crash every time it tries to check kernel debug flags (syscall 0x4b)
 	patch_syscall(ios->decrypted_buffer[index], 0x4b, 0x10000000);
