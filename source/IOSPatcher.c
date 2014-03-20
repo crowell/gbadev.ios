@@ -13,6 +13,7 @@
 #include "isfs.h"
 #include "memory/mem2.hpp"
 #include "../build/cert_sys.h"
+#include "elf.h"
 
 #define round_up(x,n)	(-(-(x) & -(n)))
 #define TITLE_UPPER(x)		( (u32)((x) >> 32) )
@@ -126,6 +127,15 @@ void forge_tik(signed_blob *s_tik)
 {
 	zero_sig(s_tik);
 	brute_tik(SIGNATURE_PAYLOAD(s_tik));
+}
+
+void patch_syscall(u8*start, u32 syscall, u32 addr)
+{	ioshdr*bin = (ioshdr*)start;
+	start += bin->hdrsize + bin->loadersize;
+	Elf32_Ehdr*elf = (Elf32_Ehdr*)start;
+	Elf32_Phdr*prog = (Elf32_Ehdr*)(start+elf->e_poff+(elf->phentsize*(elf->phnum-2)));
+	u32*table = (u32*)(start+prog->p_offset);
+	table[syscall] = addr;
 }
 
 int patch_version_check(u8 *buf, u32 size)
@@ -294,6 +304,38 @@ void display_ios_tags(u8 *buf, u32 size)
 			i += 64;
 		}
 	}
+}
+
+bool is_kernel(u8*start, u32 size)
+{	int i;
+	ioshdr*bin = (ioshdr*)start;
+	if(bin->hdrsize != 0x10) // avoid the meta info APP file
+		return false;
+	start += bin->hdrsize + bin->loadersize;
+	if(*(u32*)start != 0x7F454C46)
+		return false;
+	Elf32_Ehdr*elf = (Elf32_Ehdr*)start;
+	Elf32_Phdr*prog;
+	for(i=0; i < elf->phnum; i++)
+	{	prog = (Elf32_Ehdr*)(start+elf->e_poff+(elf->phentsize*i));
+		if(prog->p_paddr == 0xFFFF0000) // kernel should load something into SRAM
+			return true;
+	}
+	return false;
+}
+
+s32 kernel_index(IOS *ios)
+{
+	int i;
+	for (i = 0; i < ios->content_count; i++)
+	{
+		if (!ios->decrypted_buffer[i] || !ios->buffer_size[i])
+			return -1;
+		
+		if (contains_kernel(ios->decrypted_buffer[i], ios->buffer_size[i]))
+			return i;
+	}
+	return -1;
 }
 
 bool contains_module(u8 *buf, u32 size, char *module) 
@@ -873,12 +915,12 @@ s32 install_unpatched_IOS(u32 iosversion, u32 revision, bool free)
 s32 Install_patched_IOS(u32 iosnr, u32 iosrevision, bool es_trucha_patch, bool es_identify_patch, bool nand_patch, bool version_patch, bool Kill_AntiSysTitleInstall_patch, u32 location, u32 newrevision, bool free)
 {
 	int ret;
-	if (iosnr == location && iosrevision == newrevision && !es_trucha_patch && !es_identify_patch && !nand_patch && !Kill_AntiSysTitleInstall_patch)
+/*	if (iosnr == location && iosrevision == newrevision && !es_trucha_patch && !es_identify_patch && !nand_patch && !Kill_AntiSysTitleInstall_patch)
 	{
 		ret = install_unpatched_IOS(iosnr, iosrevision, free);
 		return ret;
 	}
-	
+*/	
 	IOS *ios;
 	int index;
 	bool tmd_dirty = false;
@@ -895,9 +937,24 @@ s32 Install_patched_IOS(u32 iosnr, u32 iosrevision, bool es_trucha_patch, bool e
 	tmd *p_tmd = (tmd*)SIGNATURE_PAYLOAD(ios->tmd);
 	tmd_content *p_cr = TMD_CONTENTS(p_tmd);
 
+	index = kernel_index(ios);
+	// before loading this IOS some valid ARM code needs to be written to the beginning of mem2
+	// or it will crash every time it tries to check kernel debug flags (syscall 0x4b)
+	patch_syscall(ios->decrypted_buffer[index], 0x4b, 0x10000000);
+	
+	// Force the patched module to be not shared
+	tmd_content *content = &p_tmd->contents[index];
+	content->type = 1;
+
+	// Update the content hash inside the tmd
+	sha1 hash;
+	SHA1(ios->decrypted_buffer[index], (u32)p_cr[index].size, hash);
+	memcpy(p_cr[index].hash, hash, sizeof hash);
+	tmd_dirty = true;
+
 	if (es_trucha_patch || es_identify_patch || nand_patch || version_patch || Kill_AntiSysTitleInstall_patch)
 	{
-		index = module_index(ios, "ES:"); // todo: figure out this for kernel. I see "FSP:" and "IOSP:" in vIOS d.app
+		index = module_index(ios, "ES:");
 		if (index < 0)
 		{
 			printf("Could not identify ES module\n");
