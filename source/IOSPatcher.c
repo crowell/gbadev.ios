@@ -133,8 +133,8 @@ void patch_syscall(u8*start, u32 syscall, u32 addr)
 {	ioshdr*bin = (ioshdr*)start;
 	start += bin->hdrsize + bin->loadersize;
 	Elf32_Ehdr*elf = (Elf32_Ehdr*)start;
-	Elf32_Phdr*prog = (Elf32_Ehdr*)(start+elf->e_poff+(elf->phentsize*(elf->phnum-2)));
-	printf("Syscall table found at offset 0x%08x\n", prog->p_offset)
+	Elf32_Phdr*prog = (Elf32_Phdr*)(start+elf->e_phoff+(elf->e_phentsize*(elf->e_phnum-2)));
+	printf("Syscall table found at offset 0x%08x\n", prog->p_offset);
 	u32*table = (u32*)(start+prog->p_offset);
 	printf("Old entry 0x%08x, changing to 0x%08x\n", table[syscall], addr);
 	table[syscall] = addr;
@@ -318,9 +318,9 @@ bool is_kernel(u8*start, u32 size)
 		return false;
 	Elf32_Ehdr*elf = (Elf32_Ehdr*)start;
 	Elf32_Phdr*prog;
-	for(i=0; i < elf->phnum; i++)
-	{	prog = (Elf32_Ehdr*)(start+elf->e_poff+(elf->phentsize*i));
-		if(prog->p_paddr == 0xFFFF0000) // kernel should load something into SRAM
+	for(i=0; i < elf->e_phnum; i++)
+	{	prog = (Elf32_Phdr*)(start+elf->e_phoff+(elf->e_phentsize*i));
+		if(prog->p_paddr == 0xFFFF0000) // kernel's ELF should load something into SRAM
 			return true;
 	}
 	return false;
@@ -334,7 +334,7 @@ s32 kernel_index(IOS *ios)
 		if (!ios->decrypted_buffer[i] || !ios->buffer_size[i])
 			return -1;
 		
-		if (contains_kernel(ios->decrypted_buffer[i], ios->buffer_size[i]))
+		if (is_kernel(ios->decrypted_buffer[i], ios->buffer_size[i]))
 			return i;
 	}
 	return -1;
