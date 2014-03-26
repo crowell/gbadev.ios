@@ -134,9 +134,7 @@ void patch_syscall(u8*start, u32 syscall, u32 addr)
 	start += bin->hdrsize + bin->loadersize;
 	Elf32_Ehdr*elf = (Elf32_Ehdr*)start;
 	Elf32_Phdr*prog = (Elf32_Phdr*)(start+elf->e_phoff+(elf->e_phentsize*(elf->e_phnum-2)));
-	printf("Syscall table found at offset 0x%08x\n", prog->p_offset);
 	u32*table = (u32*)(start+prog->p_offset);
-	printf("Old entry 0x%08x, changing to 0x%08x\n", table[syscall], addr);
 	table[syscall] = addr;
 }
 
@@ -353,7 +351,7 @@ bool contains_module(u8 *buf, u32 size, char *module)
 			while (buf[i+strlen(ios_version_tag)] == ' ') i++; // skip spaces
 			strlcpy(version_buf, (char *)buf + i + strlen(ios_version_tag), sizeof version_buf);
 			i += 64;
-			printf("%s\n", version_buf);
+			
 			if (strncmp(version_buf, module, strlen(module)) == 0)
 				return true;
 		}
@@ -368,7 +366,7 @@ s32 module_index(IOS *ios, char *module)
 	{
 		if (!ios->decrypted_buffer[i] || !ios->buffer_size[i])
 			return -1;
-		printf("Checking index %d\n",i);
+		
 		if (contains_module(ios->decrypted_buffer[i], ios->buffer_size[i], module))
 			return i;
 	}
@@ -937,7 +935,7 @@ s32 Install_patched_IOS(u32 iosnr, u32 iosrevision, bool es_trucha_patch, bool e
 	index = kernel_index(ios);
 	if (index < 0)
 	{
-		printf("Could not identify ES module\n");
+		printf("Could not identify kernel\n");
 		free_IOS(&ios);
 		return -1;
 	}
@@ -1052,7 +1050,7 @@ s32 Install_patched_IOS(u32 iosnr, u32 iosrevision, bool es_trucha_patch, bool e
 	printf("Preparations complete\n\n");
 	
 
-	printf("Not Installing...\n");	// we'll just call this "simulation mode" for now
+	printf("Installing...\n");
 /*	ret = install_IOS(ios, false);
 	if (ret < 0)
 	{
