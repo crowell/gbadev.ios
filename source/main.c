@@ -61,10 +61,9 @@ int main(int argc, char* argv[])
 	printf("The app was quite a simple job, built upon their actual real work.\n");
 	printf("App made by Dr Clipper/Davebaol, then automated by ZRicky11.\n");
 	printf("Wii U's vWii IOS support added by damysteryman.\n");
-	printf("Usage of the internal NAND IOS36 added by FIX94.\n \n");
-	printf("This MOD version of IOS236 installer is for Wii U's vWii ONLY!\nUsing this in a regular Wii will result in a broken IOS236.\n");
-	printf("REQUIRES vWii IOS36 v3864 wad located at SD:/IOS36-64-v3864.wad!\n(It is not avaible on NUS, must dump from a vWii or acquire elsewhere)\n\n");
-
+	printf("Usage of an internal NAND IOS added by FIX94.\n \n");
+	printf("This IOS203 installer is for Wii U's vWii ONLY!\nUsing this in a regular Wii will have unpredictable results.\n");
+	
 	/* Enable AHBPROT on title launch */
 	Patch_AHB();
 	ret = (__IOS_LoadStartupIOS() == 0 && *(vu32*)0xCD800064 == 0xFFFFFFFF);
@@ -85,16 +84,16 @@ int main(int argc, char* argv[])
 	printf("Press any button to continue...\n");
 	waitforbuttonpress(NULL, NULL);
 
-	printf("About to install IOS236\n");
-	ret = Install_patched_IOS(58, IOS58version, true, true, true, true, true, 203, 65535, false);
+	printf("About to install IOS203\n");
+	ret = Install_patched_IOS(58, IOS58version, true, true, true, true, true, 203, 0, false); // we'll start incrementing test versions from 0
 
 	ISFS_Deinitialize();
 	if (ret < 0) {
-		printf("IOS236 Install failed.  Press any button to exit...\n");
+		printf("IOS203 Install failed.  Press any button to exit...\n");
 		waitforbuttonpress(NULL, NULL);
 		Reboot();
 	}
-	printf("\nIOS236 Installation is complete!\nPress any button to exit.");
+	printf("\nIOS203 Installation is complete!\nPress any button to exit.");
 	waitforbuttonpress(NULL, NULL);
 	
 	Reboot();
